@@ -1,8 +1,8 @@
 const bcrypt = require('bcrypt-nodejs');
 const SALT_WORK_FACTOR = 12;
 
-module.exports = function(connection, DataTypes){
-    const User = connection.define('users', {
+const UserModel = function(db, DataTypes){
+    const User = db.define('users', {
         email: {
             type : DataTypes.STRING,
             unique : true,
@@ -72,6 +72,8 @@ module.exports = function(connection, DataTypes){
     return User;
 
 }
+
+module.exports = UserModel;
 
 
 
