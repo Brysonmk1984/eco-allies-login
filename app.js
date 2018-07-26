@@ -112,6 +112,10 @@ module.exports = function(app){
 
     });
 
+    app.get('/loggedin', authenticationMiddleware(), function(req, res, err){
+        console.log('MADE IT');
+    });
+
 };
 
 passport.serializeUser(function(userId, done) {
@@ -121,3 +125,15 @@ passport.serializeUser(function(userId, done) {
 passport.deserializeUser(function(userId, done) {
     done(null, userId);
 });
+
+function authenticationMiddleware(){
+    return (req, res, next, done) => {
+        console.log(`req.session.passport.user: ${JSON.stringify(req.session.passport)}`);
+        if(req.isAuthenticated()) {
+            return next();
+        }else{
+            console.log('should be redirecting here... means session not found');
+        }
+        
+    }
+}
