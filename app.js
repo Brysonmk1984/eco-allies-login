@@ -82,7 +82,6 @@ module.exports = function(app){
             publicEthKey : req.body.publicEthKey,
         })
         .then((user)=>{
-            console.log('ASDASDASDASDAS');
             req.login(user.id, function(err){
                 res.send(user);
             });
@@ -127,13 +126,16 @@ passport.deserializeUser(function(userId, done) {
 });
 
 function authenticationMiddleware(){
-    return (req, res, next, done) => {
+    return (req, res, next) => {
         console.log(`req.session.passport.user: ${JSON.stringify(req.session.passport)}`);
         if(req.isAuthenticated()) {
             return next();
         }else{
-            console.log('should be redirecting here... means session not found');
+            res.send('should be redirecting here... means session not found');
+            return false;
         }
+
+        
         
     }
 }
