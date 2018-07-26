@@ -3,15 +3,30 @@ const express = require('express');
 // sequelize
 const Sequelize = require('sequelize');
 const dbUrl = process.env.NODE_ENV === 'PRODUCTION' ? process.env.DB_URL : "postgres://admin:admin@localhost/ecoAlliesLogin";
-const db = new Sequelize(dbUrl);
+//const db = new Sequelize(dbUrl);
+const db = new Sequelize('ecoAlliesLogin', 'admin', 'admin', {
+    host: 'localhost',
+    dialect: 'postgres',
+    storage: "./session.postgres",
+    pool: {
+      max: 5,
+      min: 0,
+      acquire: 30000,
+      idle: 10000
+    },
+    operatorsAliases: false
+  });
 // parsers
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 // express-validator
 const { buildCheckFunction, validationResult } = require('express-validator/check');
 const checkBody = buildCheckFunction(['body']);
-// express-session
+// express-session & passport
 const session = require('express-session');
+const passport = require('passport');
+// initalize sequelize with session store
+const SequelizeStore = require('connect-session-sequelize')(session.Store);
 
 const UserModel = require('./models');
 
@@ -28,8 +43,15 @@ module.exports = function(app){
         secret: '1123ddsgfdrtrthsds',
         resave: false,
         saveUninitialized: false,
+        store: new SequelizeStore({
+            db
+        }),
+        proxy: true // if you do SSL outside of node.
         //cookie: { secure: true }
-    }))
+    }));
+
+    app.use(passport.initialize());
+    app.use(passport.session());
     
   
    // CREATE NEW ACCOUNT
@@ -60,7 +82,10 @@ module.exports = function(app){
             publicEthKey : req.body.publicEthKey,
         })
         .then((user)=>{
-            res.send(user);
+            console.log('ASDASDASDASDAS');
+            req.login(user.id, function(err){
+                res.send(user);
+            });
         })
         .catch((err) =>{
             res.json({ requestType : 'POST', success : false, error : err });
@@ -77,8 +102,9 @@ module.exports = function(app){
             }
         })
         .then((user) => {
-            console.log('THE USER', user);
-            res.send(user);
+            req.login(user.id, function(err){
+                res.send(user);
+            });
         })
         .catch((err) =>{
             res.json({ requestType : 'POST', success : false, error : err });
@@ -87,3 +113,11 @@ module.exports = function(app){
     });
 
 };
+
+passport.serializeUser(function(userId, done) {
+    done(null, userId);
+});
+  
+passport.deserializeUser(function(userId, done) {
+    done(null, userId);
+});

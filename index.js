@@ -11,6 +11,6 @@ app.listen( process.env.PORT || 3000, function () {
     console.log('Listening on port ' + (process.env.PORT || 3000));
 
     db.sync().then(function(){
-        require('./routes')(app);
+        require('./app')(app);
     });
 });
