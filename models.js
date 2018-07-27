@@ -69,7 +69,7 @@ const UserModel = function(db, DataTypes){
         },
         publicEthKey : {
             type : DataTypes.TEXT,
-            validate : { notEmpty :true }
+            //validate : { notEmpty :true }
         },
         // validPassword : function(password, passwd, done, user){
         //     bcrypt.compare(password, passwd, function(err, isMatch){

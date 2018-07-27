@@ -1,5 +1,6 @@
 const path = require('path');
 const express = require('express');
+const cors = require('cors')
 // sequelize
 const Sequelize = require('sequelize');
 const dbUrl = process.env.NODE_ENV === 'PRODUCTION' ? process.env.DB_URL : "postgres://admin:admin@localhost/ecoAlliesLogin";
@@ -33,6 +34,7 @@ const UserModel = require('./models');
 
 
 module.exports = function(app){
+    app.use(cors());
     app.use(bodyParser.json());
     app.use(bodyParser.urlencoded({ extended: false }));
 
@@ -54,10 +56,10 @@ module.exports = function(app){
     app.use(passport.session());
     
   
-   // CREATE NEW ACCOUNT
-    app.post('/create', [
+   // REGISTER NEW ACCOUNT
+    app.post('/register', [
         checkBody('username', 'Username field cannot be empty.').exists(),
-        checkBody('username', 'Username must be between 4-20 characters long.').isLength({ min: 5, max: 20 }),
+        checkBody('username', 'Username must be between 4-30 characters long.').isLength({ min: 5, max: 30 }),
         checkBody('email', 'The email you entered is invalid, please try again.').isEmail(),
         checkBody('email', 'Email address must be between 4-100 characters long, please try again.').isLength({ min: 4, max: 100 }),
         checkBody('password', 'Password must be between 8-100 characters long.').isLength({ min: 8, max: 100 }),
