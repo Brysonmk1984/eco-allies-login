@@ -26,11 +26,14 @@ const checkBody = buildCheckFunction(['body']);
 // express-session & passport
 const session = require('express-session');
 const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
+const flash = require('connect-flash');
 // initalize sequelize with session store
 const SequelizeStore = require('connect-session-sequelize')(session.Store);
+const bcrypt = require('bcrypt-nodejs');
 
 const UserModel = require('./models');
-
+const user = UserModel(db, Sequelize);
 
 
 module.exports = function(app){
@@ -54,6 +57,40 @@ module.exports = function(app){
 
     app.use(passport.initialize());
     app.use(passport.session());
+    app.use(flash());
+
+    passport.use(new LocalStrategy({
+        usernameField:'email', passwordField:'password'
+        },
+        function(email, password, done) {
+            console.log('LOOOOK', email, password);
+
+            user.find({
+                where : {
+                    email
+                },
+                attributes:['id','email', 'password']
+            })
+            .then((user)=>{
+                //console.log('FOUND USER!', user.dataValues.password, password);
+
+                bcrypt.compare(password, user.dataValues.password, function(err, isMatch){
+                    if(err){console.log(err);}
+                    if(isMatch){
+                    
+                        return done(null, user, {message : 'matttttch'});
+                    } else {
+                        return done(null, false, {message : 'Password did not match'});
+                    }
+                })
+            })
+            .error(function(error){
+                console.log(error);
+                return done(error, null);
+            });
+
+        }
+    ));
     
   
    // REGISTER NEW ACCOUNT
@@ -69,7 +106,6 @@ module.exports = function(app){
         // Additional validation to ensure username is alphanumeric with underscores and dashes
         checkBody('username', 'Username can only contain letters, numbers, or underscores.').matches(/^[A-Za-z0-9_-]+$/, 'i'),
     ], function(req, res){
-        const user = UserModel(db, Sequelize);
         const errors = validationResult(req);
 
         if(!errors.isEmpty()){
@@ -94,23 +130,24 @@ module.exports = function(app){
     });
 
     // LOGIN TO EXISTING ACCOUNT
-    app.post('/login', function(req, res){
-        const user = UserModel(db, Sequelize);
-        //Check if password is correct
-        user.find({
-            where : {
-                email : req.body.email
+    app.post('/login', function(req, res, next){
+        passport.authenticate('local',function(err, user, info){
+            console.log('!!! USER', user);
+            if (err) return next(err);
+            if (!user.email) {
+                return res.json({
+                    message: "no user found"
+                });
             }
-        })
-        .then((user) => {
-            req.login(user.id, function(err){
-                res.send(user);
-            });
-        })
-        .catch((err) =>{
-            res.json({ requestType : 'POST', success : false, error : err });
-        });
 
+            // Manually establish the session...
+            req.login(user.email, function(err) {
+                if (err) return next(err);
+                return res.json({
+                    message: 'user authenticated',
+                });
+            });
+        })(req, res, next);
     });
 
     app.get('/loggedin', authenticationMiddleware(), function(req, res, err){
