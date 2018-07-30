@@ -3,8 +3,7 @@ const express = require('express');
 const cors = require('cors')
 // sequelize
 const Sequelize = require('sequelize');
-const dbUrl = process.env.NODE_ENV === 'PRODUCTION' ? process.env.DB_URL : "postgres://admin:admin@localhost/ecoAlliesLogin";
-//const db = new Sequelize(dbUrl);
+
 const db = new Sequelize('ecoAlliesLogin', 'admin', 'admin', {
     host: 'localhost',
     dialect: 'postgres',
@@ -37,27 +36,41 @@ const user = UserModel(db, Sequelize);
 
 
 module.exports = function(app){
-    app.use(cors());
+    app.use(cors({credentials: true, origin: true}));
     app.use(bodyParser.json());
     app.use(bodyParser.urlencoded({ extended: false }));
 
-    app.use(cookieParser());
+    
     app.use(express.static(path.join(__dirname, 'public')));
+    app.use(cookieParser('1123ddsgfdrtrthsds'));
+
+    const store = new SequelizeStore({
+        db,
+        checkExpirationInterval: 15 * 60 * 1000, // The interval at which to cleanup expired sessions in milliseconds.
+        expiration: 864000000, // 10 Days in miliseconds
+    });
 
     app.use(session({
+        key: 'sid',
         secret: '1123ddsgfdrtrthsds',
         resave: false,
-        saveUninitialized: false,
-        store: new SequelizeStore({
-            db
-        }),
-        proxy: true // if you do SSL outside of node.
-        //cookie: { secure: true }
+        saveUninitialized: true,
+        cookie: {
+            secure: false, // Secure is Recommeneded, However it requires an HTTPS enabled website (SSL Certificate)
+            maxAge: 864000000, // 10 Days in miliseconds
+            httpOnly: false
+        },
+        store
     }));
 
     app.use(passport.initialize());
     app.use(passport.session());
     app.use(flash());
+    // app.use(function(req,res,next){
+    //     //console.log('IS AUTHENTICATED - ', req.isAuthenticated());
+    //     res.locals.isAuthenticated = req.isAuthenticated();
+    //     next();
+    // });
 
     passport.use(new LocalStrategy({
         usernameField:'email', passwordField:'password'
@@ -71,21 +84,26 @@ module.exports = function(app){
                 },
                 attributes:['id','email', 'password']
             })
-            .then((user)=>{
-                //console.log('FOUND USER!', user.dataValues.password, password);
+            .then((user, error)=>{
+                console.log('FOUND USER!', user, password);
 
-                bcrypt.compare(password, user.dataValues.password, function(err, isMatch){
-                    if(err){console.log(err);}
-                    if(isMatch){
-                    
-                        return done(null, user, {message : 'matttttch'});
-                    } else {
-                        return done(null, false, {message : 'Password did not match'});
-                    }
-                })
+                if(user){
+                    bcrypt.compare(password, user.dataValues.password, function(err, isMatch){
+                        if(err){console.log(err);}
+                        if(isMatch){
+                        
+                            return done(null, user, {message : 'Match'});
+                        } else {
+                            return done(null, false, {message : 'Password did not match'});
+                        }
+                    });
+                }
+
+                return done(error, null);
+                
             })
             .error(function(error){
-                console.log(error);
+                console.log('ERROR - ',error);
                 return done(error, null);
             });
 
@@ -121,7 +139,10 @@ module.exports = function(app){
         })
         .then((user)=>{
             req.login(user.id, function(err){
-                res.send(user);
+                if(err){
+                    res.json({ requestType : 'POST', success : false, error : err });
+                }
+                res.json({ requestType : 'POST', success : true, user });
             });
         })
         .catch((err) =>{
@@ -132,11 +153,25 @@ module.exports = function(app){
     // LOGIN TO EXISTING ACCOUNT
     app.post('/login', function(req, res, next){
         passport.authenticate('local',function(err, user, info){
-            console.log('!!! USER', user);
+            store.get(req.sessionID, (err,sess)=>{
+                if(err){
+                    console.log('Error retrieving session - ', err);
+                    return res.json({
+                        error: "Error retrieving session ",
+                        loggedIn : false,
+                        requestType : 'POST',
+                        success : false
+                    });
+                }
+            })
             if (err) return next(err);
             if (!user.email) {
+                console.log('No user found...');
                 return res.json({
-                    message: "no user found"
+                    error: "No user found...",
+                    loggedIn : false,
+                    requestType : 'POST',
+                    success : false
                 });
             }
 
@@ -144,15 +179,29 @@ module.exports = function(app){
             req.login(user.email, function(err) {
                 if (err) return next(err);
                 return res.json({
-                    message: 'user authenticated',
+                    sessionId : req.sessionID,
+                    loggedIn : true,
+                    requestType : 'POST',
+                    success : true
                 });
             });
         })(req, res, next);
     });
 
-    app.get('/loggedin', authenticationMiddleware(), function(req, res, err){
-        console.log('MADE IT');
+    app.get('/logout', function(req, res){
+        //console.log('sessid-1',req.sessionID);
+        req.session.destroy(((err)=>{
+            if(err){
+                console.log('Error destroying session - ', err);
+                res.json({error : err, loggedIn : true, requestType : 'GET', success : false});
+            }
+        }));
+
+        req.logout();
+        res.json({loggedIn : false, requestType : 'GET', success : true});
     });
+
+    app.get('/logged-in', authenticationMiddleware());
 
 };
 
@@ -164,17 +213,30 @@ passport.deserializeUser(function(userId, done) {
     done(null, userId);
 });
 
-function authenticationMiddleware(){
-    return (req, res, next) => {
-        console.log(`req.session.passport.user: ${JSON.stringify(req.session.passport)}`);
-        if(req.isAuthenticated()) {
-            return next();
-        }else{
-            res.send('should be redirecting here... means session not found');
-            return false;
-        }
 
-        
-        
+/*
+ * Check the request if the user is authenticated.
+ * Return an error message if not, otherwise keep going :)
+ */
+function authenticationMiddleware() {
+    return function(req, res, done) {
+        console.log('REQUSER -- ', req.user);
+      // isAuthenticated is set by `deserializeUser()`
+      if (!req.isAuthenticated || !req.isAuthenticated()) {
+        //console.log('BEFORE error', req.isAuthenticated());
+        res.status(401).send({
+          success: false,
+          message: 'You are not logged in',
+          requestType : 'GET'
+        });
+      } else {
+        res.status(200).send({
+            success: true,
+            message: `You are logged in as ${req.user}`,
+            requestType : 'GET'
+          })
+      }
+      done();
     }
-}
+  }
+  
