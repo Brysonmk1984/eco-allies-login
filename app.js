@@ -150,7 +150,7 @@ module.exports = function(app){
     // LOGIN TO EXISTING ACCOUNT
     app.post('/login', function(req, res, next){
         console.log('in login');
-        passport.authenticate('local',function(err, user, info){
+        passport.authenticate('local',function(err, u, info){
             store.get(req.sessionID, (err,sess)=>{
                 if(err){
                     console.log('Error retrieving session - ', err);
@@ -163,7 +163,7 @@ module.exports = function(app){
                 }
             })
             if (err) return next(err);
-            if (!user.email) {
+            if (!u.email) {
                 console.log('No user found...');
                 return res.json({
                     error: "No user found...",
@@ -174,14 +174,28 @@ module.exports = function(app){
             }
 
             // Manually establish the session...
-            req.login(user.email, function(err) {
+            req.login(u.email, function(err) {
                 if (err) return next(err);
-                return res.json({
-                    sessionId : req.sessionID,
-                    loggedIn : true,
-                    requestType : 'POST',
-                    success : true
+
+                user.find({
+                    where : {
+                        email : u.email
+                    },
+                    attributes:['publicEthKey']
+                }).then((user, err) => {
+                    res.json({
+                        sessionId : req.sessionID,
+                        user : user.email,
+                        publicEthKey : user.dataValues.publicEthKey,
+                        loggedIn : true,
+                        requestType : 'POST',
+                        success : true
+                    });
+                    next();
                 });
+
+
+
             });
         })(req, res, next);
     });
