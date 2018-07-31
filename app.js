@@ -65,7 +65,7 @@ module.exports = function(app){
 
     app.use(passport.initialize());
     app.use(passport.session());
-    app.use(flash());
+    //app.use(flash());
     // app.use(function(req,res,next){
     //     //console.log('IS AUTHENTICATED - ', req.isAuthenticated());
     //     res.locals.isAuthenticated = req.isAuthenticated();
@@ -76,8 +76,6 @@ module.exports = function(app){
         usernameField:'email', passwordField:'password'
         },
         function(email, password, done) {
-            console.log('LOOOOK', email, password);
-
             user.find({
                 where : {
                     email
@@ -97,10 +95,9 @@ module.exports = function(app){
                             return done(null, false, {message : 'Password did not match'});
                         }
                     });
+                }else{
+                    return done(error, null);
                 }
-
-                return done(error, null);
-                
             })
             .error(function(error){
                 console.log('ERROR - ',error);
@@ -152,6 +149,7 @@ module.exports = function(app){
 
     // LOGIN TO EXISTING ACCOUNT
     app.post('/login', function(req, res, next){
+        console.log('in login');
         passport.authenticate('local',function(err, user, info){
             store.get(req.sessionID, (err,sess)=>{
                 if(err){
