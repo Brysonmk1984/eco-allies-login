@@ -236,19 +236,33 @@ function authenticationMiddleware() {
       // isAuthenticated is set by `deserializeUser()`
       if (!req.isAuthenticated || !req.isAuthenticated()) {
         //console.log('BEFORE error', req.isAuthenticated());
+        
         res.status(401).send({
-          success: false,
-          message: 'You are not logged in',
-          requestType : 'GET'
-        });
-      } else {
-        res.status(200).send({
-            success: true,
-            message: `You are logged in as ${req.user}`,
+            success: false,
+            message: 'You are not logged in',
             requestType : 'GET'
-          })
+        });
+        done();
+        
+        
+      } else {
+        user.find({
+            where : {
+                email : req.user
+            },
+            attributes:['publicEthKey']
+        })
+        .then((user, error)=>{
+            res.status(200).send({
+                success: true,
+                message: `You are logged in as ${req.user}`,
+                publicEthKey: user.dataValues.publicEthKey,
+                requestType : 'GET'
+            });
+            done();
+        });
       }
-      done();
+      
     }
   }
   
