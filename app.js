@@ -213,39 +213,31 @@ module.exports = function(app){
         res.json({loggedIn : false, requestType : 'GET', success : true});
     });
 
-    app.get('/logged-in', authenticationMiddleware());
+    /*
+    * Check the request if the user is authenticated.
+    * Return an error message if not, otherwise keep going :)
+    */
+    app.use(function(req, res, next){
 
-};
-
-passport.serializeUser(function(userId, done) {
-    done(null, userId);
-});
-  
-passport.deserializeUser(function(userId, done) {
-    done(null, userId);
-});
-
-
-/*
- * Check the request if the user is authenticated.
- * Return an error message if not, otherwise keep going :)
- */
-function authenticationMiddleware() {
-    return function(req, res, done) {
         console.log('REQUSER -- ', req.user);
-      // isAuthenticated is set by `deserializeUser()`
-      if (!req.isAuthenticated || !req.isAuthenticated()) {
-        //console.log('BEFORE error', req.isAuthenticated());
-        
-        res.status(401).send({
-            success: false,
-            message: 'You are not logged in',
-            requestType : 'GET'
-        });
-        done();
-        
-        
-      } else {
+
+        // isAuthenticated is set by `deserializeUser()`
+        if (!req.isAuthenticated || !req.isAuthenticated()) {
+            //console.log('BEFORE error', req.isAuthenticated());
+            
+            res.status(401).send({
+                success: false,
+                message: 'You are not logged in',
+                requestType : 'GET'
+            });
+        }else{
+            next();
+        }
+
+    });
+
+    app.get('/logged-in', function(req, res, next){
+        console.log('Shouldnt be in here');
         user.find({
             where : {
                 email : req.user
@@ -259,10 +251,42 @@ function authenticationMiddleware() {
                 publicEthKey: user.dataValues.publicEthKey,
                 requestType : 'GET'
             });
-            done();
+            next();
         });
-      }
-      
-    }
-  }
+    });
+
+    app.get('/account-details', function(req, res, next){
+        user.find({
+            where : {
+                email : req.user
+            },
+            attributes:['publicEthKey', 'username', 'createdAt', 'email']
+        })
+        .then((user, error)=>{
+            console.log('!!!', user);
+            res.status(200).send({
+                success: true,
+                message: `You are logged in as ${req.user}`,
+                publicEthKey: user.dataValues.publicEthKey,
+                username: user.dataValues.username,
+                email: user.dataValues.email,
+                createdAt: user.dataValues.createdAt,
+                requestType : 'GET'
+            });
+            next();
+        });
+    });
+
+};
+
+passport.serializeUser(function(userId, done) {
+    done(null, userId);
+});
+  
+passport.deserializeUser(function(userId, done) {
+    done(null, userId);
+});
+
+
+
   
