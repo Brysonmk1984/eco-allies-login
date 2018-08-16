@@ -223,24 +223,24 @@ module.exports = function(app){
     * Check the request if the user is authenticated.
     * Return an error message if not, otherwise keep going :)
     */
-    // app.use(function(req, res, next){
+    app.use(function(req, res, next){
         
-    //     console.log('REQUSER -- ', req.user);
+        console.log('REQUSER -- ', req.user);
 
-    //     // isAuthenticated is set by `deserializeUser()`
-    //     if (!req.isAuthenticated || !req.isAuthenticated()) {
-    //         //console.log('BEFORE error', req.isAuthenticated());
+        // isAuthenticated is set by `deserializeUser()`
+        if (!req.isAuthenticated || !req.isAuthenticated()) {
+            //console.log('BEFORE error', req.isAuthenticated());
             
-    //         res.status(401).send({
-    //             success: false,
-    //             message: 'You are not logged in',
-    //             requestType : 'GET'
-    //         });
-    //     }else{
-    //         next();
-    //     }
+            res.status(401).send({
+                success: false,
+                message: 'You are not logged in',
+                requestType : 'GET'
+            });
+        }else{
+            next();
+        }
 
-    // });
+    });
 
     app.get('/logged-in', function(req, res, next){
         console.log('Shouldnt be in here');
