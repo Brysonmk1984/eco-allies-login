@@ -3,10 +3,11 @@ const express = require('express');
 const cors = require('cors')
 // sequelize
 const Sequelize = require('sequelize');
-
-const db = new Sequelize('ecoAlliesLogin', 'admin', 'admin', {
-    host: 'localhost',
+//console.log('NE', process.env.NODE_ENV);
+const dbUrl = process.env.NODE_ENV === 'production' ? process.env.DATABASE_URL : "postgres://admin:admin@localhost/ecoAlliesLogin";
+const sequelizeSettings = {
     dialect: 'postgres',
+    protocol: 'postgres',
     storage: "./session.postgres",
     pool: {
       max: 5,
@@ -15,7 +16,14 @@ const db = new Sequelize('ecoAlliesLogin', 'admin', 'admin', {
       idle: 10000
     },
     operatorsAliases: false
-  });
+}
+if(process.env.NODE_ENV === 'production'){
+    sequelizeSettings.dialectOptions =  {
+        ssl: true
+    }
+}
+
+const db = new Sequelize(dbUrl, sequelizeSettings);
 // parsers
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
@@ -123,11 +131,10 @@ module.exports = function(app){
     ], function(req, res){
         const errors = validationResult(req);
 
-        if(!errors.isEmpty()){
+        if(!errors.isEmpty()){console.log('no errors for val');
             res.json({ requestType : 'POST', success : false, error : errors.array() });
             return;
         }
-
         user.create({
             username : req.body.username,
             email : req.body.email,
@@ -149,7 +156,6 @@ module.exports = function(app){
 
     // LOGIN TO EXISTING ACCOUNT
     app.post('/login', function(req, res, next){
-        console.log('in login');
         passport.authenticate('local',function(err, u, info){
             store.get(req.sessionID, (err,sess)=>{
                 if(err){
@@ -263,7 +269,6 @@ module.exports = function(app){
             attributes:['publicEthKey', 'username', 'createdAt', 'email']
         })
         .then((user, error)=>{
-            console.log('!!!', user);
             res.status(200).send({
                 success: true,
                 message: `You are logged in as ${req.user}`,
