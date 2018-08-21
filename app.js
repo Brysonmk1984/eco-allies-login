@@ -64,7 +64,7 @@ module.exports = function(app){
         secret: '1123ddsgfdrtrthsds',
         resave: false,
         saveUninitialized: true,
-        proxy : true, // add this when behind a reverse proxy, if you need secure cookies
+        proxy : false, // add this when behind a reverse proxy, if you need secure cookies
         cookie: {
             secure: ENV === 'production' ? true : true, // Secure is Recommeneded, However it requires an HTTPS enabled website (SSL Certificate)
             maxAge: 864000000, // 10 Days in miliseconds
