@@ -52,14 +52,13 @@ module.exports = function(app){
     
     app.use(express.static(path.join(__dirname, 'public')));
     app.use(cookieParser('1123ddsgfdrtrthsds'));
-    app.set('trust proxy');
-    app.enable('trust proxy');
+
     const store = new SequelizeStore({
         db,
         checkExpirationInterval: 15 * 60 * 1000, // The interval at which to cleanup expired sessions in milliseconds.
         expiration: 864000000, // 10 Days in miliseconds
     });
-    
+    app.set('trust proxy',1);
     app.use(session({
         key: 'sid',
         secret: '1123ddsgfdrtrthsds',
@@ -67,7 +66,7 @@ module.exports = function(app){
         saveUninitialized: true,
         proxy : true, // add this when behind a reverse proxy, if you need secure cookies
         cookie: {
-            secure: ENV === 'production' ? true : false, // Secure is Recommeneded, However it requires an HTTPS enabled website (SSL Certificate)
+            secure: ENV === 'production' ? true : true, // Secure is Recommeneded, However it requires an HTTPS enabled website (SSL Certificate)
             maxAge: 864000000, // 10 Days in miliseconds
         },
         store
