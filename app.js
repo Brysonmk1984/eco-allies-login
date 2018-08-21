@@ -18,7 +18,7 @@ const sequelizeSettings = {
     },
     operatorsAliases: false
 }
-if(ENV === 'production'){
+if(ENV === 'production'){console.log('PRODUCTION ADDING SSL');
     sequelizeSettings.dialectOptions =  {
         ssl: true
     }
@@ -52,7 +52,8 @@ module.exports = function(app){
     
     app.use(express.static(path.join(__dirname, 'public')));
     app.use(cookieParser('1123ddsgfdrtrthsds'));
-
+    app.set('trust proxy');
+    app.enable('trust proxy');
     const store = new SequelizeStore({
         db,
         checkExpirationInterval: 15 * 60 * 1000, // The interval at which to cleanup expired sessions in milliseconds.
@@ -80,8 +81,7 @@ module.exports = function(app){
     //     res.locals.isAuthenticated = req.isAuthenticated();
     //     next();
     // });
-    app.set('trust proxy');
-    app.enable('trust proxy');
+
     passport.use(new LocalStrategy({
         usernameField:'email', passwordField:'password'
         },
