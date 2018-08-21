@@ -4,7 +4,8 @@ const cors = require('cors')
 // sequelize
 const Sequelize = require('sequelize');
 //console.log('NE', process.env.NODE_ENV);
-const dbUrl = process.env.NODE_ENV === 'production' ? process.env.DATABASE_URL : "postgres://admin:admin@localhost/ecoAlliesLogin";
+const ENV = process.env.NODE_ENV;
+const dbUrl = ENV === 'production' ? process.env.DATABASE_URL : "postgres://admin:admin@localhost/ecoAlliesLogin";
 const sequelizeSettings = {
     dialect: 'postgres',
     protocol: 'postgres',
@@ -17,7 +18,7 @@ const sequelizeSettings = {
     },
     operatorsAliases: false
 }
-if(process.env.NODE_ENV === 'production'){
+if(ENV === 'production'){
     sequelizeSettings.dialectOptions =  {
         ssl: true
     }
@@ -57,7 +58,7 @@ module.exports = function(app){
         checkExpirationInterval: 15 * 60 * 1000, // The interval at which to cleanup expired sessions in milliseconds.
         expiration: 864000000, // 10 Days in miliseconds
     });
-
+    
     app.use(session({
         key: 'sid',
         secret: '1123ddsgfdrtrthsds',
@@ -65,9 +66,8 @@ module.exports = function(app){
         saveUninitialized: true,
         proxy : true, // add this when behind a reverse proxy, if you need secure cookies
         cookie: {
-            secure: false, // Secure is Recommeneded, However it requires an HTTPS enabled website (SSL Certificate)
+            secure: ENV === 'production' ? true : false, // Secure is Recommeneded, However it requires an HTTPS enabled website (SSL Certificate)
             maxAge: 864000000, // 10 Days in miliseconds
-            httpOnly: false
         },
         store
     }));
@@ -80,7 +80,8 @@ module.exports = function(app){
     //     res.locals.isAuthenticated = req.isAuthenticated();
     //     next();
     // });
-
+    app.set('trust proxy');
+    app.enable('trust proxy');
     passport.use(new LocalStrategy({
         usernameField:'email', passwordField:'password'
         },
@@ -270,6 +271,7 @@ module.exports = function(app){
             attributes:['publicEthKey', 'username', 'createdAt', 'email']
         })
         .then((user, error)=>{
+            console.log('U', user);
             res.status(200).send({
                 success: true,
                 message: `You are logged in as ${req.user}`,
