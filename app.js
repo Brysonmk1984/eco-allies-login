@@ -52,7 +52,7 @@ module.exports = function(app){
     });
     app.set('trust proxy', 1);
     app.use(session({
-        key: 'sid',
+        key: process.env.NODE_ENV === 'production' ? '__cfduid' : 'sid',
         secret: '1123ddsgfdrtrthsds',
         resave: false,
         saveUninitialized: true,
@@ -105,40 +105,40 @@ module.exports = function(app){
     ));
     // REGISTER NEW ACCOUNT
     app.post('/register', [
-    checkBody('username', 'Username field cannot be empty.').exists(),
-    checkBody('username', 'Username must be between 4-30 characters long.').isLength({ min: 5, max: 30 }),
-    checkBody('email', 'The email you entered is invalid, please try again.').isEmail(),
-    checkBody('email', 'Email address must be between 4-100 characters long, please try again.').isLength({ min: 4, max: 100 }),
-    checkBody('password', 'Password must be between 8-100 characters long.').isLength({ min: 8, max: 100 }),
-    //checkBody("password", "Password must include one lowercase character, one uppercase character, a number, and a special character.").matches(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?!.* )(?=.*[^a-zA-Z0-9]).{8,}$/, "i"),
-    checkBody('passwordConfirm', 'Password must be between 8-100 characters long.').isLength({ min: 8, max: 100 }),
-    checkBody('passwordConfirm', 'Passwords do not match, please try again.').custom((value, { req }) => value === req.body.password),
-    // Additional validation to ensure username is alphanumeric with underscores and dashes
-    checkBody('username', 'Username can only contain letters, numbers, or underscores.').matches(/^[A-Za-z0-9_-]+$/, 'i'),
-    ], function(req, res){
-    const errors = validationResult(req);
-    console.log('ERRORS!!', errors.array());
-    if(!errors.isEmpty()){
-    res.json({ requestType : 'POST', success : false, error : errors.array() });
-    return;
-    }
-    user.create({
-        username : req.body.username,
-        email : req.body.email,
-        password : req.body.password,
-        publicEthKey : req.body.publicEthKey,
-    })
-    .then((user)=>{console.log('u2', user);
-    req.login(user.id, function(err){
-    if(err){
-    res.json({ requestType : 'POST', success : false, error : err });
-    }
-    res.json({ requestType : 'POST', success : true, user });
-    });
-    })
-    .catch((err) =>{console.log('CAUGHT ERR', err);
-    res.json({ requestType : 'POST', success : false, error : err });
-    });
+        checkBody('username', 'Username field cannot be empty.').exists(),
+        checkBody('username', 'Username must be between 4-30 characters long.').isLength({ min: 5, max: 30 }),
+        checkBody('email', 'The email you entered is invalid, please try again.').isEmail(),
+        checkBody('email', 'Email address must be between 4-100 characters long, please try again.').isLength({ min: 4, max: 100 }),
+        checkBody('password', 'Password must be between 8-100 characters long.').isLength({ min: 8, max: 100 }),
+        //checkBody("password", "Password must include one lowercase character, one uppercase character, a number, and a special character.").matches(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?!.* )(?=.*[^a-zA-Z0-9]).{8,}$/, "i"),
+        checkBody('passwordConfirm', 'Password must be between 8-100 characters long.').isLength({ min: 8, max: 100 }),
+        checkBody('passwordConfirm', 'Passwords do not match, please try again.').custom((value, { req }) => value === req.body.password),
+        // Additional validation to ensure username is alphanumeric with underscores and dashes
+        checkBody('username', 'Username can only contain letters, numbers, or underscores.').matches(/^[A-Za-z0-9_-]+$/, 'i'),
+        ], function(req, res){
+        const errors = validationResult(req);
+        console.log('ERRORS!!', errors.array());
+        if(!errors.isEmpty()){
+        res.json({ requestType : 'POST', success : false, error : errors.array() });
+        return;
+        }
+        user.create({
+            username : req.body.username,
+            email : req.body.email,
+            password : req.body.password,
+            publicEthKey : req.body.publicEthKey,
+        })
+        .then((user)=>{console.log('u2', user);
+        req.login(user.id, function(err){
+        if(err){
+        res.json({ requestType : 'POST', success : false, error : err });
+        }
+        res.json({ requestType : 'POST', success : true, user });
+        });
+        })
+        .catch((err) =>{console.log('CAUGHT ERR', err);
+        res.json({ requestType : 'POST', success : false, error : err });
+        });
     });
     // LOGIN TO EXISTING ACCOUNT
     app.post('/login', function(req, res, next){
